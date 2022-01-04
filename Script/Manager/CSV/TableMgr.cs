@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Script.Manager.ManagerType;
+using Script.Manager.Util.Log;
 using Script.Table;
 using UnityEngine;
 
@@ -10,68 +12,81 @@ namespace Script.Manager.CSV
 {
     public class TableMgr : ScriptMgr
     {
-        private static Dictionary<string, (Func<IEnumerable> func, Type type)> _tblTypeDic;
+        private static Dictionary<string, (Func<IEnumerable> readFunc, Type type)> _tblTypeDic;
         private static Dictionary<Type, Dictionary<int, DefBase>> _defListDic;
-        
-        public override void Inject()
-        {
-
-        }
         
         public override void Initialize()
         {
-            var validList = new List<(IEnumerable list, Type type)>();
+            var dataList = new List<(IEnumerable list, Type type)>();
 
-            _tblTypeDic = new Dictionary<string, (Func<IEnumerable> func, Type type)>();
+            _tblTypeDic = new Dictionary<string, (Func<IEnumerable> readFunc, Type type)>();
             _defListDic = new Dictionary<Type, Dictionary<int, DefBase>>();
             
             RegisterTable();
-
-            var fileList = Directory.GetFiles(Application.streamingAssetsPath + TableUtil.TABLE_DESTINATION);
-
-            foreach (var currFile in fileList)
+            ReadCSV();
+            
+            // Tbl의 build가 끝난 뒤 Def에서 Tbl의 데이터를 가져오기 때문에, Tbl과 Def를 나누어 루프를 2번 돈다.
+            BuildTbl();
+            BuildDef();
+            
+            void ReadCSV()
             {
-                var ext = Path.GetExtension(currFile);
-                if (ext != ".csv")
-                {
-                    continue;
-                }
+                var fileList = Directory.GetFiles(Application.streamingAssetsPath + TableUtil.TABLE_DESTINATION);
 
-                var fileName = Path.GetFileNameWithoutExtension(currFile);
-                if (_tblTypeDic.TryGetValue(fileName, out var tblTypeFunc) == false)
+                foreach (var currFile in fileList)
                 {
-                    Debug.LogErrorFormat("Cannot find fileName from TypeDic, {0}", fileName);
-                    continue;
-                }
+                    // meta file이 함께 들어오므로
+                    var ext = Path.GetExtension(currFile);
+                    if (ext != ".csv")
+                    {
+                        continue;
+                    }
+
+                    var fileName = Path.GetFileNameWithoutExtension(currFile);
+                    if (_tblTypeDic.TryGetValue(fileName, out var tblTypeFunc) == false)
+                    {
+                        Log.EF("Table", "Cannot find fileName from TypeDic, {0}", fileName);
+                        continue;
+                    }
                 
-                var enumerable = tblTypeFunc.func.Invoke();
-                validList.Add((enumerable, tblTypeFunc.type));
+                    var readList = tblTypeFunc.readFunc.Invoke();
+                    dataList.Add((readList, tblTypeFunc.type));
+                }
             }
 
-            foreach (var currDef in validList)
+            void BuildTbl()
             {
-                foreach (var defData in currDef.list)
+                foreach (var (list, type) in dataList)
                 {
-                    if(defData is TblBase tblBaseData)
+                    foreach (var defData in list)
                     {
-                        var rtnValue = tblBaseData.Build();
-                        _defListDic[currDef.type].Add(rtnValue.id, rtnValue.def); 
+                        if (!(defData is TblBase tblBaseData))
+                        {
+                            continue;
+                        }
+                        
+                        var (id, def) = tblBaseData.Build();
+                        _defListDic[type].Add(id, def);
                     }
                 }
             }
-            
-            foreach (var defBase in _defListDic.Values.SelectMany(defs => defs))
+
+            void BuildDef()
             {
-                defBase.Value.Build();
+                foreach (var defBase in _defListDic.Values.SelectMany(defs => defs))
+                {
+                    defBase.Value.Build();
+                }
             }
         }
 
+        // TDef 타입의 가공된 Dictionary형 테이블 데이터를 가져옴
         public static bool TryGetDef<TDef>(out Dictionary<int, DefBase> baseDic)
             where TDef : DefBase
         {
             if(_defListDic.TryGetValue(typeof(TDef), out var result) == false)
             {
-                Debug.LogWarningFormat("No DefList from type {0}", typeof(TDef).Name);
+                Log.WF(LogCategory.TABLE, "No DefList from type {0}", typeof(TDef).Name);
                 baseDic = null;
                 return false;
             }
@@ -80,31 +95,34 @@ namespace Script.Manager.CSV
             return true;
         }
         
+        // TDef 타입의 id에 부합하는 가공된 테이블 데이터를 가져옴
         public static bool TryGetDefData<TDef>(int id, out TDef rtnDef)
             where TDef : DefBase
         {
+            rtnDef = null;
+
             if(TryGetDef<TDef>(out var baseDic) == false)
             {
-                rtnDef = null;
                 return false;
             }
 
             if (baseDic.TryGetValue(id, out DefBase def) == false)
             {
-                Debug.LogWarningFormat("No DefItem from dic Type {0}, id {1}", typeof(TDef).Name, id);
-                rtnDef = null;
+                Log.WF(LogCategory.TABLE, "No DefItem from dic Type {0}, id {1}", typeof(TDef).Name, id);
                 return false;
             }
 
             if (def is TDef == false)
             {
-                Debug.LogWarningFormat("DefItem is not Type {0}, id {1}", typeof(TDef).Name, id);
+                Log.WF(LogCategory.TABLE, "DefItem is not Type {0}, id {1}", typeof(TDef).Name, id);
+                return false;
             }
             
             rtnDef = (TDef)def;
             return true;
         }
             
+        // ** Tbl을 클래스 추가 시 반드시 Register해줘야 함
         private void RegisterTable()
         {
             _tblTypeDic.Add("TblPerson", (() => CsvReader<TblPerson>.Read("TblPerson.csv"), typeof(DefPerson)));

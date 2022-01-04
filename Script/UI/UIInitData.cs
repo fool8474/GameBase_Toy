@@ -1,6 +1,6 @@
 ﻿namespace Script.UI
 {
-    public class UIInitData
+    public abstract class UIInitData
     {
         
     }

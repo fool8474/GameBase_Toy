@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
@@ -17,7 +16,7 @@ namespace Script.Manager.CSV
 
             using (var sr = new StreamReader(fullPath))
             {
-                var headersRead = false;
+                var isData = false;
 
                 while(true)
                 {
@@ -28,36 +27,48 @@ namespace Script.Manager.CSV
                         break;
                     }
                     
-                    var propertyValues = line.Split(',').ToList();
-
-                    // ID 처리
-                    propertyValues.Add(propertyValues.ElementAt(0));
-                    propertyValues.RemoveAt(0);
-                    
-                    if (headersRead)
-                    {
-                        var obj = new T();
-
-                        obj.AssignValuesFromCsv(propertyValues, ignoreSet);
-                        objects.Add(obj);
-                    }
-
-                    else
-                    {
-                        for (var i = 0; i < propertyValues.Count; i++)
-                        {
-                            if (propertyValues[i].Contains("Memo"))
-                            {
-                                ignoreSet.Add(i);
-                            }
-                        }
-                        
-                        headersRead = true;
-                    }
+                    ReadRow(line, isData);
+                    isData = true; // 첫 열 이후에는 데이터
                 }
             }
 
             return objects;
+
+            void ReadRow(string data, bool isHeader)
+            {
+                var propertyValues = data.Split(',').ToList();
+
+                // ID 처리 (*모든 테이블에는 ID가 0번쨰로 존재하도록 한다)
+                propertyValues.Add(propertyValues.ElementAt(0));
+                propertyValues.RemoveAt(0);
+
+                // data case
+                if (isHeader)
+                {
+                    var obj = new T();
+
+                    obj.AssignValuesFromCsv(propertyValues, ignoreSet);
+                    objects.Add(obj);
+                }
+
+                // header case
+                else
+                {
+                    ReadHeader(propertyValues);
+                }
+            }
+            
+            void ReadHeader(IReadOnlyList<string> propertyValues)
+            {
+                for (var i = 0; i < propertyValues.Count; i++)
+                {
+                    // 이름에 memo가 포함된 열의 경우 무시하도록 한다.
+                    if (propertyValues[i].Contains("Memo"))
+                    {
+                        ignoreSet.Add(i);
+                    }
+                }
+            }
         }
     }
 }

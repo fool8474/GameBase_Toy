@@ -4,27 +4,28 @@ namespace Script.Table
 {
     public class DefPerson : DefBase
     {
-        private string _name;
-        private string _lastName;
-        private DefAddress _address;
+        public readonly string Name;
+        public readonly string LastName;
+        public DefAddress Address;
 
-        private int _addressId;
+        public readonly int AddressId;
 
         public DefPerson(string name, string lastName, int addressId)
         {
-            _name = name;
-            _lastName = lastName;
-            _addressId = addressId;
+            Name = name;
+            LastName = lastName;
+            AddressId = addressId;
         }
 
         public override string ToString()
         {
-            return _name + " " + _lastName + " " + _address;
+            return Name + " " + LastName + " " + Address;
         }
         
         public override void Build()
         {
-            TableMgr.TryGetDefData(_addressId, out _address);
+            // 타 def 사용 데이터를 가져오도록 함.
+            TableMgr.TryGetDefData(AddressId, out Address);
         }
     }
     

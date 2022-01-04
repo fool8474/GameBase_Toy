@@ -1,12 +1,16 @@
 ﻿using Script.Manager;
-using UnityEngine;
 
 namespace Script.UI
 {
-    public class UIData : MonoBehaviour
+    public class UIData
     {
-        public UIType UIType;
-        public bool IsSingle;
-        public string Name;
+        public readonly UIType UIType;
+        public readonly string Id;
+
+        public UIData(UIType uiType, string id)
+        {
+            UIType = uiType;
+            Id = id;
+        }
     }
 }

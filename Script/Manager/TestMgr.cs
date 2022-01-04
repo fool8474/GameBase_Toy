@@ -1,41 +1,66 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using Script.Inject;
-using Script.UI.Presenters;
+using Script.Manager.ManagerType;
+using Script.UI.Controllers;
 using UnityEngine;
 
 namespace Script.Manager
 {
     public class TestMgr : MonoMgr
     {
-        private UIMgr uiMgr;
+        private PopupMgr _popupMgr;
+        private UITransitionMgr _uiTransitionMgr;
         
         public override void Inject()
         {
-            uiMgr = Injector.GetInstance<UIMgr>();
+            _popupMgr = Injector.GetInstance<PopupMgr>();
+            _uiTransitionMgr = Injector.GetInstance<UITransitionMgr>();
         }
 
         private void Update()
         {
             if(Input.GetKeyDown(KeyCode.A))
             {
-                uiMgr.ShowUI(typeof(TestController), true);
+                _uiTransitionMgr.MoveEvent.Execute(UIContentType.TEST1);
             }
             
             else if (Input.GetKeyDown(KeyCode.S))
             {
-                uiMgr.ShowUI(typeof(TestController), false);
-            }
-            
-            if(Input.GetKeyDown(KeyCode.D))
-            {
-                uiMgr.ShowUI(typeof(TestControllerPopup), true);
+                _uiTransitionMgr.SetInitData(new TestControllerPopupInitData(new List<string>
+                {
+                    Random.Range(0, 100).ToString(),
+                    Random.Range(0, 100).ToString(),
+                    Random.Range(0, 100).ToString(),
+                    Random.Range(0, 100).ToString(),
+                    Random.Range(0, 100).ToString(),
+                    Random.Range(0, 100).ToString()
+                })).MoveEvent.Execute(UIContentType.TEST2);
             }
             
             else if (Input.GetKeyDown(KeyCode.F))
             {
-                uiMgr.ShowUI(typeof(TestControllerPopup), false);
+                _uiTransitionMgr.BackEvent.Execute();
             }
+            
+            else if (Input.GetKeyDown(KeyCode.Z))
+            {
+                _uiTransitionMgr.MoveEvent.Execute(UIContentType.TEST4);
+            }
+            
+            // else if (Input.GetKeyDown(KeyCode.D))
+            // {
+            //     _popupMgr.AddPopup(PopupUIType.TEST);
+            // }
+            
+            // else if (Input.GetKeyDown(KeyCode.G))
+            // {
+            //     _popupMgr.QuitPopup();
+            // }
 
+            else if (Input.GetKeyDown(KeyCode.H))
+            {
+                _uiTransitionMgr.MoveEvent.Execute(UIContentType.MAIN_GAME);
+            }
         }
     }
 }

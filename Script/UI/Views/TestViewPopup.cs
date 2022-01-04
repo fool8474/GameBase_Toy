@@ -1,7 +1,30 @@
-﻿namespace Script.UI.Views
+﻿using System.Collections.Generic;
+using Script.UI.Models;
+using TMPro;
+using UniRx;
+using UnityEngine;
+
+namespace Script.UI.Views
 {
-    public class TestViewPopup : View
+    public class TestViewPopup : View<TestModelPopup>
     {
-        protected string PrefabName = "UITestPopup";
+        [SerializeField] private List<TextMeshProUGUI> _initTextList;
+            
+        public override void Initialize()
+        {
+            base.Initialize();
+
+            _model.InitList
+                .Subscribe(UpdateInitData)
+                .AddTo(_disposable);
+        }
+
+        private void UpdateInitData(List<string> stringList)
+        {
+            for (var i = 0; i < stringList.Count && i < _initTextList.Count; i++)
+            {
+                _initTextList[i].text = stringList[i];
+            }
+        }
     }
 }

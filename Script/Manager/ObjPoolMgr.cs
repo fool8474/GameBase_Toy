@@ -1,122 +1,196 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using Cysharp.Threading.Tasks;
+using Script.Inject;
+using Script.Manager.ManagerType;
+using Script.Manager.Util.Log;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Script.Manager
 {
-    public enum PoolSize
-    {
-        ONLY_ONE = 1,
-        VERY_LOW = 3,
-        LOW = 6,
-        MEDIUM = 10,
-        HIGH = 30,
-        VERY_HIGH = 50,
-        CUSTOM = -1,
-    }
-    
     public class ObjPoolMgr : MonoMgr
     {
-        private Dictionary<GameObject, List<GameObject>> _objPoolDic;
+        // (Object Get) GetObject - GetGameObject -  CreateNewObject - RegisterNewPool
+        // (Object Init) InitObject - RegisterNewPool - CreateNewObject
         
+        private Dictionary<string, Queue<GameObject>> _objectPool;
+        private ResourceMgr _prefabMgr;
+        
+        public override void Initialize()
+        {
+            _objectPool = new Dictionary<string, Queue<GameObject>>();
+        }
+
         public override void Inject()
         {
-            
+            _prefabMgr = Injector.GetInstance<ResourceMgr>();
         }
 
-        private void Start()
+        public void Clear()
         {
-            _objPoolDic = new Dictionary<GameObject, List<GameObject>>();
-        }
-
-        public void InitPool(GameObject obj, PoolSize sizeType, int count = 0)
-        {
-            if (obj == null)
+            foreach (var currKey in _objectPool.Keys)
             {
-                Debug.LogErrorFormat("GameObject is Null");
+                Clear(currKey);
+            }
+        }
+
+        private void Clear(string id)
+        {
+            if (_objectPool.TryGetValue(id, out var objectList) == false)
+            {
                 return;
             }
 
-            if (_objPoolDic.ContainsKey(obj))
+            foreach (var currGo in objectList)
             {
-                Debug.LogErrorFormat("Pool already have gameObj {0}", obj.name);
-                return;
+                Destroy(currGo);
             }
             
-            var objs = new List<GameObject>();
-            AddPool(obj, objs, sizeType == PoolSize.CUSTOM ? count : (int)sizeType);
-            _objPoolDic.Add(obj, objs);
-        }
-        
-        private List<GameObject> AddPool(GameObject target, ICollection<GameObject> targetList, int count)
-        {
-            var newObjs = new List<GameObject>();
-            for (var i = 0; i < count; i++)
-            {
-                var instantiated = Instantiate(target);
-                newObjs.Add(instantiated);
-                targetList.Add(instantiated);
-            }
-
-            return newObjs;
+            objectList.Clear();
+            _objectPool.Remove(id);
         }
 
-        public void Return(GameObject target)
+        // 오브젝트의 생성을 하거나 최초 등록을 하기위해 사용
+        public async UniTask InitObject(string id, int cnt = 1, Transform parent = null)
         {
-            if (_objPoolDic.TryGetValue(target, out var list) == false)
+            RegisterNewPool(id);
+            
+            // Register시에는 오브젝트를 생성하지 않으므로 따로 생성해주도록 한다.
+            for (var i = 0; i < cnt; i++)
             {
-                var newList = new List<GameObject>();
-                AddPool(target, newList, (int)PoolSize.ONLY_ONE);
-                _objPoolDic.Add(target, newList);
+                var loaded = await CreateNewObject(id, parent: parent);
+                _objectPool[id].Enqueue(loaded);
             }
+        }
 
+        public bool HasKey(string id)
+        {
+            return _objectPool.ContainsKey(id);
+        }
+
+        private async UniTask<GameObject> GetGameObject(string id, Transform parent = null)
+        {
+            GameObject rtnObj = null;
+            
+            // ObjPool에 등록되었을 경우
+            if (_objectPool.TryGetValue(id, out var objQueue))
+            {
+                if (objQueue.Count == 0)
+                {
+                    // Queue가 부족할 경우 새롭게 생성
+                    await CreateNewObject(id, parent);
+                    rtnObj = objQueue.Dequeue();
+                }
+
+                else
+                {
+                    rtnObj = objQueue.Dequeue();
+                }
+            }
+            
+            // 등록되지 않았을 경우
             else
             {
-                list.Add(target);
-            }
-        }
-
-        #region PopPool
-        public bool TryPopPool(GameObject target, out GameObject rtnTarget)
-        {
-            if (_objPoolDic.TryGetValue(target, out var list) == false)
-            {
-                InitPool(target, PoolSize.ONLY_ONE);
-                list = _objPoolDic[target];
+                await CreateNewObject(id, parent);
+                rtnObj = _objectPool[id].Dequeue();
             }
             
-            if (list.Count > 0)
+            if (parent != null)
             {
-                rtnTarget = list.FirstOrDefault();
-                list.Remove(rtnTarget);
+                rtnObj.transform.SetParent(parent);
+            }
 
-                return true;
+            return rtnObj;
+        }
+        
+        public async UniTask<GameObject> GetObject(string id, Action createAction = null, Transform parent = null)
+        {
+            // GameObject는 GetComponent가 안되기 떄문에 오버로딩함
+            var rtnObj = await GetGameObject(id, parent);
+        
+            AfterGetObject(rtnObj, createAction);
+            return rtnObj;
+        }
+        
+        public async UniTask<T> GetObject<T>(string id, Action createAction = null, Transform parent = null)
+        {
+            var rtnObj = await GetGameObject(id, parent);
+            
+            if (rtnObj.TryGetComponent<T>(out var rtnValue) == false)
+            {
+                Log.EF(LogCategory.OBJECT_POOL, "Cannot load component from obj {0}", rtnObj.name);
+                ReturnObject(id, rtnObj);
+                return default;
             }
             
-            rtnTarget = AddPool(target, list, 1)[0];
-            return true;
+            AfterGetObject(rtnObj, createAction);
+            return rtnValue;
         }
 
-        public bool TryPopPool<T>(GameObject target, out T rtnTarget)
+        // Object를 얻은 뒤 발생
+        private void AfterGetObject(GameObject obj, Action createAction = null)
         {
-            if (TryPopPool(target, out var goTarget) == false)
-            {
-                Debug.LogErrorFormat("Cannot get Target, target name is {0}", target.name);
-                rtnTarget = default;
-                return false;
-            }
+            obj.SetActive(true);
+            createAction?.Invoke();
+        }
+        
+        private async UniTask<GameObject> CreateNewObject(string id, Transform parent = null)
+        {
+            // Resources - Path / Addressable - Id
+            var obj = ResourceMgr.IsValidResourcesPath(id) ? 
+                _prefabMgr.InstantiateObjPath(id, parent) : 
+                await _prefabMgr.InstantiateObjId(id, parent);
 
-            if (goTarget.TryGetComponent<T>(out rtnTarget))
-            {
-                return true;
-            }
-                
-            Debug.LogErrorFormat("Target didn't have component name {0}, target name is {1}", typeof(T).ToString(), target.name);
-            return false;
+            RegisterNewPool(id, obj);
+            return obj;
         }
 
-        #endregion
+        private GameObject CreateNewObject(GameObject copyTarget, Transform parent = null)
+        {
+            var newGo = Instantiate(copyTarget, parent);
+            newGo.name = copyTarget.name;
+            RegisterNewPool(copyTarget.name, newGo);
+            return newGo;
+        }
+
+        private Queue<GameObject> RegisterNewPool(string id)
+        {
+            if (HasKey(id))
+            {
+                return _objectPool[id];
+            }
+            
+            var newObjectQueue = new Queue<GameObject>();
+            _objectPool.Add(id, newObjectQueue);
+            return newObjectQueue;
+        }
+        
+        private void RegisterNewPool(string id, GameObject obj)
+        {
+            var newPool = RegisterNewPool(id);
+            newPool.Enqueue(obj);
+        }
+        
+        public void ReturnObject(string id, GameObject returnObj, Action returnAction = null, Transform parent = null)
+        {
+            if (_objectPool.TryGetValue(id, out var objectList))
+            {
+                objectList.Enqueue(returnObj);
+            }
+            else
+            {
+                RegisterNewPool(id, returnObj);
+            }
+
+            returnAction?.Invoke();
+
+            if (returnObj == null)
+            {
+                return;
+            }
+            
+            returnObj.transform.SetParent(parent == null ? transform : parent);
+            returnObj.SetActive(false);
+        }
     }
 }

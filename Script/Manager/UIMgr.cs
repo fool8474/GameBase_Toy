@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Script.Inject;
+using Cysharp.Threading.Tasks;
+using Script.Manager.ManagerType;
+using Script.Manager.Util.Log;
 using Script.UI;
-using Script.UI.Models;
-using Script.UI.Presenters;
-using UnityEngine;
+using Script.UI.Controllers;
 
 namespace Script.Manager
 {
@@ -13,106 +13,100 @@ namespace Script.Manager
     {
         MAIN = 0,
         FIXED = 100,
-        POPUP = 200
+        POPUP = 200,
+        LOADING = 300,
     }
     
     public class UIMgr : ScriptMgr
     {
-        private Dictionary<Type, IController> _uiSingleDic;
-        private Dictionary<Type, List<IController>> _uiMultiDic;
-        
-        private PrefabMgr _prefabMgr;
-        private ObjPoolMgr _objPoolMgr;
+        private Dictionary<Type, List<IController>> _uiDictionary;
         
         public override void Initialize()
         {
-            AddCanvas();
             RegisterUI();
         }
-
-        private void AddCanvas()
-        {
-            _prefabMgr.InstantiateObjPath<Canvas>(PrefabPath.UI_PATH + PrefabPath.MAIN_CANVAS_NAME);
-        }
-
-        private void RegisterUI()
-        {
-            _uiSingleDic = new Dictionary<Type, IController>
-            {
-                {typeof(TestController), new TestController(ScriptableObject.CreateInstance<TestModel>())}
-            };
-
-            _uiMultiDic = new Dictionary<Type, List<IController>>
-            {
-                {typeof(TestControllerPopup), new List<IController> {new TestControllerPopup(ScriptableObject.CreateInstance<TestModelPopup>())}} 
-            };
-        }
-
+        
         public override void Inject()
         {
-            _prefabMgr = Injector.GetInstance<PrefabMgr>();
-            _objPoolMgr = Injector.GetInstance<ObjPoolMgr>();
-        }
-
-        private void ShowPopup()
-        {
-            
-        }
-
-        private void RefreshLayer()
-        {
-            
         }
         
-        public bool ShowUI(Type showType, bool isVisible)
+        public async UniTask SetVisibleUI(Type showType, bool isVisible)
         {
-            UIData data = null;
-            if (_uiSingleDic.TryGetValue(showType, out var controller))
+            if (_uiDictionary.TryGetValue(showType, out var controllerList) == false)
             {
-                data = controller.GetUIData();
-                
-                if (data.IsSingle && controller.IsVisible())
-                {
-                    Debug.LogFormat("UI is already visible {0}", data.Name);
-                    return false;
-                }
-
-                ShowUI(data, controller, isVisible);
-                return true;
-            }
-
-            if (_uiMultiDic.TryGetValue(showType, out var controllers))
-            {
-                if (controllers.Any(currCtrl => currCtrl.IsVisible() == false))
-                {
-                    ShowUI(data, controller, isVisible);
-                    return true;
-                }
-                
-                // TODO : Generate New Controller Set
+                Log.EF(LogCategory.UI, "Cannot find presenter from uiDic {0}", showType.Name);
+                return;
             }
             
-            Debug.LogErrorFormat("Cannot find presenter from uiDic {0}", showType.Name);
-            return false;
+            if (controllerList.Count == 0)
+            {
+                Log.EF(LogCategory.UI, "No Controller in list {0}", showType.Name);
+                return;
+            }
+
+            var controller = GetValidController(controllerList);
+
+            if (controller == null)
+            {
+                Log.EF(LogCategory.UI, "No Valid Controller {0}", showType.Name);
+                return;
+            }
+            
+            await controller.SetVisible(isVisible);
         }
 
-        private void ShowUI(UIData data, IController controller, bool isVisible)
+        private IController GetValidController(IEnumerable<IController> ctrlList)
         {
-               
-            switch (data.UIType)
+            return ctrlList.FirstOrDefault();
+        }
+        
+        public T GetController<T>() where T : class, IController
+        {
+            if (TryGetController<T>(out var controller) == false)
             {
-                case UIType.MAIN:
-                    controller.SetVisible(isVisible);
-                    break;
-                case UIType.FIXED:
-                    controller.SetVisible(isVisible);
-                    break;
-                case UIType.POPUP:
-                    controller.SetVisible(isVisible);
-                    break;
-                default:
-                    break;
+                Log.EF(LogCategory.UI, "Cannot get controller from dic, {0}", typeof(T).Name);
+                return null;
             }
+
+            return controller;
+        }
+        
+        public bool TryGetController<T>(out T controller) where T : class, IController
+        {
+            controller = default;
+            
+            if(_uiDictionary.TryGetValue(typeof(T), out var ctrlList) == false)
+            {
+                return false;
+            }
+
+            controller = GetValidController(ctrlList) as T;
+            return true;
+        }
+        
+        public void RegisterUI(Type key, IController value)
+        {
+            if (_uiDictionary.TryGetValue(key, out var ctrlList) == false)
+            {
+                ctrlList = new List<IController>();
+                _uiDictionary.Add(key, ctrlList);
+            }
+
+            ctrlList.Add(value);
+        }
+        
+        // ** 새로운 UI 추가 시 이곳에 Register해야 함
+        private void RegisterUI()
+        {
+            _uiDictionary = new Dictionary<Type, List<IController>>();
+            
+            RegisterUI(typeof(TestController), new TestController());
+            RegisterUI(typeof(TestControllerPopup), new TestControllerPopup());
+            RegisterUI(typeof(TestControllerPopup2), new TestControllerPopup2());
+            RegisterUI(typeof(TestControllerPopup3), new TestControllerPopup3());
+            RegisterUI(typeof(LoadingUIController), new LoadingUIController());
+            RegisterUI(typeof(TestHeavyController), new TestHeavyController());
+            RegisterUI(typeof(InGameUIController), new InGameUIController());
         }
     }
 }

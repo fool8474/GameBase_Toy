@@ -4,18 +4,18 @@ namespace Script.Table
 {
     public class DefAddress : DefBase
     {
-        private string _city;
-        private string _country;
+        public readonly string City;
+        public readonly string Country;
         
         public DefAddress(string city, string country)
         {
-            _city = city;
-            _country = country;
+            City = city;
+            Country = country;
         }
 
         public override string ToString()
         {
-            return _city + " " + _country;
+            return City + " " + Country;
         }
     }
 
@@ -31,6 +31,7 @@ namespace Script.Table
 
         public override (int id, DefBase def) Build()
         {
+            // 타 Def에 사용될 경우를 고려
             var defAddress = new DefAddress(City, Country);
             return (Id, defAddress);
         }
