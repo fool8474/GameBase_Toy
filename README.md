@@ -1,5 +1,4 @@
 # GameBase_ToyProject
-* 게임의 베이스 시스템이 되는 코드들을 차근차근 작성해 나갑니다.
 * 사용 라이브러리 :: UniRx / UniTask
 
 1. DI Container (Injector)
