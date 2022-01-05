@@ -1,6 +1,5 @@
 # GameBase_ToyProject
-* 게임의 베이스 시스템이 되는 코드들을 차근차근 작성해 나갑니다.
-* 사용 라이브러리 / UniRx
+* 사용 라이브러리 :: UniRx / UniTask
 
 1. DI Container (Injector)
 - DI Container를 통한 의존성 주입 시스템
@@ -16,3 +15,6 @@
 - MVC에 기반한 UI 시스템 구현
 - Director를 통해 다양한 연출이 가능하도록 설정
 - UIMgr에서는 IController Dictionary를 보유하고 있어 각 UI에 명령을 내릴 수 있음 
+- UITransitionMgr를 통해 원하는 컨텐츠의 UI로 이동 가능. 이동 시 비동기식으로 로딩이 진행되며, 로딩 UI를 띄워 줌
+- ScrollItem Controller를 통해 동적으로 생성되는 ScrollItem을 관리
+- Button을 상속한 Custom AnButton 추가 (Ripple / Button Click Delay 등의 기능)
