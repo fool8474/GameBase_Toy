@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Script.Manager;
+using Script.Manager.ManagerType;
 using Script.Manager.Util.Log;
 using UnityEngine;
 
@@ -34,10 +35,7 @@ namespace Script.Inject
         // Mono가 아닌 type을 등록
         public static void RegisterTypeScript<T>(bool ignoreOrigin = false) where T : IInjectedClass, IInitialize, new()
         {
-            var instance = RegisterType<T>(ignoreOrigin);
-
-            instance.Inject();
-            instance.Initialize();
+            RegisterType<T>(ignoreOrigin);
         }
 
         // Mono를 등록 (path로 받음)
@@ -56,12 +54,8 @@ namespace Script.Inject
 
             var target = ((ResourceMgr) prefabManager).InstantiateObjPath<T>(path);
             InjectDic.Add(typeof(T), target);
-            
-            // Inject를 먼저 실시하여 null case를 방지
-            target.Inject();
-            target.Initialize();
         }
-       
+
         // Mono를 등록 (class로 받는 케이스)
         public static void RegisterTypeMono<T>(T target) where T : MonoBehaviour, IInjectedClass, IInitialize
         {
@@ -72,9 +66,24 @@ namespace Script.Inject
             }
 
             InjectDic.Add(typeof(T), target);
-            target.Inject();
-            target.Initialize();
         }
+
+        public static void InitializeContainer()
+        {
+            foreach(var injectedTarget in InjectDic.Values)
+            {
+                if (injectedTarget is IInjectedClass injectable)
+                {
+                    injectable.Inject();
+                }
+                
+                if (injectedTarget is IInitialize initializable)
+                {
+                    initializable.Initialize();
+                }
+            }
+        }
+       
         
         // 등록한 타입을 사용할 수 있도록 함
         public static T GetInstance<T>()

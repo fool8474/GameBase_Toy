@@ -155,8 +155,8 @@ namespace Script.UI.Component
         private void BindEvent(GameObject go, ItemData itemData)
         {
             // event bind
-            var itemButton = go.GetComponent<AnButton>();
-            itemButton.OnClickAsObservable().Subscribe(_ =>
+            var itemButton = go?.GetComponent<AnButton>();
+            itemButton?.OnClickAsObservable().Subscribe(_ =>
             {
                 var idx = go.transform.GetSiblingIndex();
                     

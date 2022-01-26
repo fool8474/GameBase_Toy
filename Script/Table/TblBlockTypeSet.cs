@@ -12,19 +12,19 @@ namespace Script.Table
     {
         public readonly PuzzleBlockType BlockType;
 
-        public DefBlockTypeSet(PuzzleBlockType blockType)
+        public DefBlockTypeSet(int id, string blockType) : base(id)
         {
-            BlockType = blockType;
+            BlockType = (PuzzleBlockType)Enum.Parse(typeof(PuzzleBlockType), blockType);
         }
     }
 
     public class  TblBlockTypeSet : TblBase
     {
-        PuzzleBlockType BlockType { get; set; }
+        public string BlockType { get; set; }
 
         public override (int id, DefBase def) Build()
         {
-            var defBlockTypeSet = new DefBlockTypeSet(BlockType);
+            var defBlockTypeSet = new DefBlockTypeSet(Id, BlockType);
             return (Id, defBlockTypeSet);
         }
     }

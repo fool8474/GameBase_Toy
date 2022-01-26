@@ -2,6 +2,6 @@
 {
     public static class TableUtil
     {
-        public const string TABLE_DESTINATION = "/Tables/";
+        public const string TABLE_DESTINATION = "Tables";
     }
 }

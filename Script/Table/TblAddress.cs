@@ -7,7 +7,7 @@ namespace Script.Table
         public readonly string City;
         public readonly string Country;
         
-        public DefAddress(string city, string country)
+        public DefAddress(int id, string city, string country) : base(id)
         {
             City = city;
             Country = country;
@@ -32,7 +32,7 @@ namespace Script.Table
         public override (int id, DefBase def) Build()
         {
             // 타 Def에 사용될 경우를 고려
-            var defAddress = new DefAddress(City, Country);
+            var defAddress = new DefAddress(Id, City, Country);
             return (Id, defAddress);
         }
     }

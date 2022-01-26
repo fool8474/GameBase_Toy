@@ -63,15 +63,25 @@ namespace Script.Manager
             }
         }
 
-        public bool HasKey(string id)
+        public bool HaveKey(string id)
         {
             return _objectPool.ContainsKey(id);
         }
 
+        public bool HaveObject(string id)
+        {
+            if(HaveKey(id) == false)
+            {
+                return false;
+            }
+
+            return _objectPool[id].Count != 0;
+        }
+
         private async UniTask<GameObject> GetGameObject(string id, Transform parent = null)
         {
-            GameObject rtnObj = null;
-            
+            GameObject rtnObj;
+
             // ObjPool에 등록되었을 경우
             if (_objectPool.TryGetValue(id, out var objQueue))
             {
@@ -105,7 +115,7 @@ namespace Script.Manager
         
         public async UniTask<GameObject> GetObject(string id, Action createAction = null, Transform parent = null)
         {
-            // GameObject는 GetComponent가 안되기 떄문에 오버로딩함
+            // GameObject는 GetComponent가 안되기 때문에 오버로딩함
             var rtnObj = await GetGameObject(id, parent);
         
             AfterGetObject(rtnObj, createAction);
@@ -155,7 +165,7 @@ namespace Script.Manager
 
         private Queue<GameObject> RegisterNewPool(string id)
         {
-            if (HasKey(id))
+            if (HaveKey(id))
             {
                 return _objectPool[id];
             }

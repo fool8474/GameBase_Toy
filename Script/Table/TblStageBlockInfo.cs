@@ -13,7 +13,7 @@ namespace Script.Table
         public readonly List<int> BlockIdList;
         public readonly List<int> ProbabilityList;
 
-        public DefStageBlockInfo(List<int> blockIdList, List<int> probabilityList)
+        public DefStageBlockInfo(int id, List<int> blockIdList, List<int> probabilityList) : base(id)
         {
             BlockIdList = blockIdList;
             ProbabilityList = probabilityList;
@@ -30,6 +30,7 @@ namespace Script.Table
             var seps = new char[] { '/' };
 
             var defStageBlockInfo = new DefStageBlockInfo(
+                Id,
                 StringUtil.SplitToList<int>(seps, BlockIdList),
                 StringUtil.SplitToList<int>(seps, ProbabilityList));
             

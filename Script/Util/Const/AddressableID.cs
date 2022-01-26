@@ -13,6 +13,9 @@
         public const string LOADING_UI = "LoadingUI";
         public const string HEAVY_TEST_UI = "HeavyTestUI";
         public const string INGAME_UI = "InGameUI";
+        public const string LOBBY_NAVIGATION_BAR_UI = "LobbyNavigationBarUI";
+        public const string ANDROID_TEST_UI = "UIAndroidTest";
+        public const string BOTTOM_FIXED_PLAYER_STAT_UI = "BottomFixedPlayerStatUI"; 
         #endregion
 
         #region Test
@@ -27,6 +30,7 @@
 
         #region Atlas
         public const string ATLAS_PUZZLE_ATLAS = "Atlas_PuzzleAtlas";
+        public const string ATLAS_ICON_ATLAS = "Atlas_IconAtlas";
         #endregion
     }
 }

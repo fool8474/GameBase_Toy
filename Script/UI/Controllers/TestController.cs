@@ -20,7 +20,7 @@ namespace Script.UI.Controllers
 
         private void SetTestData()
         {
-            if(TableMgr.TryGetDef<DefPerson>(out var defPerson) == false)
+            if(TableMgr.TryGetDefDic<DefPerson>(out var defPerson) == false)
             {
                 return;
             }

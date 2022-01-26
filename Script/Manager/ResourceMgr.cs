@@ -17,13 +17,16 @@ namespace Script.Manager
         {
             // T Case
             var go = await Addressables.InstantiateAsync(id, parent);
+            go.name = go.name.Replace("(Clone)", "").Trim();
             return CheckAndGetComponent<T>(id, go);
         }
 
         public async UniTask<GameObject> InstantiateObjId(string id, Transform parent = null)
         {
             // GameObject Case
-            return await Addressables.InstantiateAsync(id, parent);
+            var go = await Addressables.InstantiateAsync(id, parent);
+            go.name = go.name.Replace("(Clone)", "").Trim();
+            return go;
         }
 
         public async UniTask<T> GetObjById<T>(string id)
@@ -33,18 +36,22 @@ namespace Script.Manager
         }
 
         #endregion
-        
+
         #region Resources
         public T InstantiateObjPath<T>(string path, Transform parent = null) where T : Component
         {
             // T Case
-            return Instantiate(GetPrefabFromPath<T>(path), parent);
+            var go = Instantiate(GetPrefabFromPath<T>(path), parent);
+            go.name = go.name.Replace("(Clone)", "").Trim();
+            return go;
         }
-        
+
         public GameObject InstantiateObjPath(string path, Transform parent = null)
         {
             // GameObject Case
-            return Instantiate(GetPrefabFromPath(path), parent);
+            var go = Instantiate(GetPrefabFromPath(path), parent);
+            go.name = go.name.Replace("(Clone)", "").Trim();
+            return go;
         }
         
         private T GetPrefabFromPath<T>(string path) where T : Component

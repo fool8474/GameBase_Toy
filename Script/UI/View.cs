@@ -6,7 +6,6 @@ using Script.Inject;
 using Script.Manager;
 using Script.Manager.Util.Log;
 using UniRx;
-using UnityEditor.AddressableAssets.Build;
 using UnityEngine;
 
 namespace Script.UI
@@ -28,7 +27,11 @@ namespace Script.UI
         protected Dictionary<KeyCode, Action> _inputDictionary;
 
         protected ObjPoolMgr _objPoolMgr;
-        private CanvasMgr _canvasMgr;
+        protected CanvasMgr _canvasMgr;
+        protected UIMgr _uiMgr;
+        protected UITransitionMgr _uiTransitionMgr;
+
+        protected FixedUISetter[] _fixedUISetters;
 
         protected CompositeDisposable _disposable = new CompositeDisposable();
 
@@ -39,17 +42,34 @@ namespace Script.UI
             _director = GetComponentInChildren<UIAnimDirector>();
             _objPoolMgr = Injector.GetInstance<ObjPoolMgr>();
             _canvasMgr = Injector.GetInstance<CanvasMgr>();
+            _uiTransitionMgr = Injector.GetInstance<UITransitionMgr>();
+            _uiMgr = Injector.GetInstance<UIMgr>();
         }
         
         public virtual void Initialize()
         {
             _inputDictionary = new Dictionary<KeyCode, Action>();
-            
             _director.InitView();
-            
+            InitializeFixedUI();
+
             _model.VisibleEvent
                 .Subscribe(VisibleEvent)
                 .AddTo(_disposable);
+        }
+        
+        private void InitializeFixedUI()
+        {
+            _fixedUISetters = GetComponents<FixedUISetter>();
+
+            if(_fixedUISetters == null || _fixedUISetters.Length == 0)
+            {
+                return;
+            }
+
+            foreach(var fixedUISetter in _fixedUISetters)
+            {
+                fixedUISetter.Initialize();
+            }
         }
 
         protected void Update()
@@ -59,6 +79,11 @@ namespace Script.UI
 
         private void InputCheck()
         {
+            if(_inputDictionary == null)
+            {
+                return;
+            }
+
             foreach (var kvp in _inputDictionary)
             {
                 if (Input.GetKeyDown(kvp.Key))
@@ -92,6 +117,7 @@ namespace Script.UI
         protected virtual async void VisibleEvent(bool isVisible)
         {
             _model.IsVisible = isVisible;
+            gameObject.SetActive(isVisible);
 
             if (isVisible)
             {
@@ -104,23 +130,40 @@ namespace Script.UI
             }
         }
         
-        protected virtual async UniTask InitializeWithVisible()
+        protected virtual UniTask InitializeWithVisible()
         {
             SetCanvas();
+            return default;
         }
 
         protected virtual void FinalizeHide()
         {
+            _uiMgr.ReturnView(gameObject);
             _model.FinalizeView.Execute();
-            _objPoolMgr.ReturnObject(_model.UIData.Id, gameObject);
         }
-        
+
+        private async UniTask SetVisibleFixedUI(bool isVisible, bool isImmediate)
+        {
+            if(_fixedUISetters == null || _fixedUISetters.Length == 0)
+            {
+                return;
+            }
+
+            foreach(var fixedUISetter in _fixedUISetters)
+            {
+                await fixedUISetter.ShowUIWithInitData(isVisible, isImmediate);
+            }
+        }
+
         public async UniTask SetVisible(bool isVisible, bool isImmediate = false)
         {
             if (_director == null || _model.IsVisible == isVisible)
             {
                 return;
             }
+
+            _uiTransitionMgr.RegisterAnimationUI(gameObject.GetHashCode());
+            await SetVisibleFixedUI(isVisible, isImmediate);
 
             if (isVisible)
             {
@@ -142,6 +185,7 @@ namespace Script.UI
                 
                 _model.VisibleEvent.Execute(false);
             }
+            _uiTransitionMgr.FinishAnimationUI(gameObject.GetHashCode());
         }
 
         public async UniTask ShowUIVisibleAnimation(bool isVisible)
@@ -153,9 +197,10 @@ namespace Script.UI
         {
             _canvasMgr.MoveObjToCanvas(_model.UIData.UIType, gameObject);
         }
-        
+
         public virtual void Dispose()
         {
+            _objPoolMgr.ReturnObject(_model.UIData.Id, gameObject);
             _disposable.Dispose();
         }
     }

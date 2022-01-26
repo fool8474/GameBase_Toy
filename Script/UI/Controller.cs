@@ -4,7 +4,9 @@ using Cysharp.Threading.Tasks;
 using Script.Event;
 using Script.Inject;
 using Script.Manager;
+using Script.Manager.Util.Log;
 using UniRx;
+using UnityEngine;
 
 namespace Script.UI
 {
@@ -18,6 +20,7 @@ namespace Script.UI
         UIData GetUIData();
         UniTask ShowUIVisibleAnimation(bool isVisible);
         void SetInitData(UIInitData initData);
+        bool IsVisible();
     }
     
     public class Controller<TModel> : IDisposable, IController where TModel : Model 
@@ -35,7 +38,6 @@ namespace Script.UI
 
         protected UIInitData _initData;
         private List<IController> _childUIList;
-        
         private bool _completeVisible = true;
 
         protected Controller(string id, TModel model)
@@ -67,13 +69,8 @@ namespace Script.UI
                 .AddTo(_disposable);
         }
 
-        protected virtual void AfterInitializeView()
-        {
-        }
-        
         private async UniTask InitPrefab()
         {
-            await _objPoolMgr.InitObject(_model.UIData.Id);
             _view = await _objPoolMgr.GetObject<IView>(prefabId);
             InitializeView();
         }
@@ -90,14 +87,6 @@ namespace Script.UI
             _objPoolMgr = Injector.GetInstance<ObjPoolMgr>();
         }
         
-        public virtual void InitializeWithVisible()
-        {
-        }
-
-        public virtual void InitializeWithData()
-        {
-        }
-
         public virtual async UniTask SetVisible(bool isVisible, bool immediate = false)
         {
             switch (isVisible)
@@ -135,14 +124,17 @@ namespace Script.UI
             _completeVisible = false;
             if (isVisible)
             {
-                if (_objPoolMgr.HasKey(_model.UIData.Id) == false)
+                if (_view == null)
                 {
-                    await InitPrefab();
-                }
+                    if (_objPoolMgr.HaveObject(_model.UIData.Id) == false)
+                    {
+                        await InitPrefab();
+                    }
 
-                else
-                {
-                    _view = await _objPoolMgr.GetObject<IView>(prefabId);
+                    else
+                    {
+                        _view = await _objPoolMgr.GetObject<IView>(prefabId);
+                    }
                 }
                 
                 AfterInitializeView();
@@ -184,7 +176,6 @@ namespace Script.UI
                     await _view.ShowUIVisibleAnimation(false);
                 }   
             }
-            
         }
 
         private async UniTask ShowChildUIVisibleAnimation(bool isVisible)
@@ -195,9 +186,9 @@ namespace Script.UI
             }
         }
 
-        public void AddChildUI(Type type, IController controller)
+        public void AddChildUI<T>(T controller) where T : IController
         {
-            _uiMgr.RegisterUI(type, controller);
+            _uiMgr.RegisterUI(controller);
             _childUIList.Add(controller);
         }
 
@@ -210,7 +201,15 @@ namespace Script.UI
         {
             return _model.UIData;
         }
+        
+        public bool IsVisible()
+        {
+            return _model.IsVisible;        
+        }
 
+        protected virtual void AfterInitializeView() { }
+        public virtual void InitializeWithVisible() { }
+        public virtual void InitializeWithData() { }
         public virtual void Dispose()
         {
             _disposable?.Dispose();

@@ -4,7 +4,6 @@ using Script.Manager;
 using Script.Manager.ManagerType;
 using Script.Manager.Util.Log;
 using System.Collections.Generic;
-using UnityEngine;
 using Script.InGame.PuzzleBlock;
 using System;
 
@@ -12,7 +11,7 @@ namespace Script.InGame.PuzzleBlockFactory
 {
     public class PuzzleBlockFactoryMgr : ScriptMgr
     {
-        public Dictionary<Type, IPuzzleBlockFactory> _factoryDic;
+        public Dictionary<Type, PuzzleBlockFactoryBase> _factoryDic;
 
         private ObjPoolMgr _objPoolMgr;
 
@@ -20,14 +19,12 @@ namespace Script.InGame.PuzzleBlockFactory
         {
             base.Initialize();
 
-            _factoryDic = new Dictionary<Type, IPuzzleBlockFactory>();
+            _factoryDic = new Dictionary<Type, PuzzleBlockFactoryBase>();
             RegistFactory();
         }
 
         public override void Inject()
         {
-            base.Inject();
-
             _objPoolMgr = Injector.GetInstance<ObjPoolMgr>();
         }
 
@@ -38,7 +35,7 @@ namespace Script.InGame.PuzzleBlockFactory
             _factoryDic.Add(typeof(PuzzlePopArea), new TargetAreaPuzzleBlockFactory());
         }
 
-        public async UniTask<T> GenerateBlock<T>(RectTransform parentRt, List<string> valList = null) where T : PuzzleBlockBase 
+        public async UniTask<T> GenerateBlock<T>(int blockId) where T : PuzzleBlockBase 
         {
             if(_factoryDic.TryGetValue(typeof(T), out var factory) == false)
             {
@@ -46,7 +43,7 @@ namespace Script.InGame.PuzzleBlockFactory
                 return null;
             }
 
-            return await factory.GenerateBlock(_objPoolMgr, parentRt, valList) as T;
+            return await factory.GetNewBlock(blockId) as T;
         }
     }
 }

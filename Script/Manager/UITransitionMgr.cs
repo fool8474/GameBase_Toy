@@ -18,6 +18,7 @@ namespace Script.Manager
         TEST3,
         TEST4,
         MAIN_GAME,
+        ANDROID,
     }
     
     public class UITransitionMgr : ScriptMgr, IDisposable
@@ -25,12 +26,14 @@ namespace Script.Manager
         private Dictionary<UIContentType, IController> _uiContentDic;
         private List<IController> _uiCallStack;  
         private IController _currController;
-        
+
         private UIMgr _uiMgr;
+        private PopupMgr _popupMgr;
         
-        private bool _isEventBlock;
         private UIInitData _initData;
-        
+        private bool _isEventBlock;
+        public HashSet<int> _animationUISet;
+
         #region Event
         public IEventCommand BackEvent => _backEvent;
         private readonly EventCommand _backEvent = new EventCommand();
@@ -50,6 +53,7 @@ namespace Script.Manager
         {
             _uiContentDic = new Dictionary<UIContentType, IController>();
             _uiCallStack = new List<IController>();
+            _animationUISet = new HashSet<int>();
             
             RegisterContent();
 
@@ -65,6 +69,7 @@ namespace Script.Manager
         public override void Inject()
         {
             _uiMgr = Injector.GetInstance<UIMgr>();
+            _popupMgr = Injector.GetInstance<PopupMgr>();
         }
 
         private void RegisterContent()
@@ -74,6 +79,7 @@ namespace Script.Manager
             RegisterContent<TestControllerPopup3>(UIContentType.TEST3);
             RegisterContent<TestHeavyController>(UIContentType.TEST4);
             RegisterContent<InGameUIController>(UIContentType.MAIN_GAME);
+            RegisterContent<AndroidTestUIController>(UIContentType.ANDROID);
         }
 
         public UITransitionMgr SetInitData(UIInitData initData)
@@ -82,7 +88,7 @@ namespace Script.Manager
             return this;
         }
         
-        private void RegisterContent<T>(UIContentType uiType) where T : class, IController
+        private void RegisterContent<T>(UIContentType uiType) where T : class, IController, new()
         {
             var controller = _uiMgr.GetController<T>();
             
@@ -97,9 +103,29 @@ namespace Script.Manager
             return _isEventBlock;
         }
     
+        public void RegisterAnimationUI(int code)
+        {
+            if(_animationUISet.Contains(code))
+            {
+                return;
+            }
+
+            _animationUISet.Add(code);
+        }
+
+        public void FinishAnimationUI(int code)
+        {
+            if(_animationUISet.Contains(code) == false)
+            {
+                return;
+            }
+
+            _animationUISet.Remove(code);
+        }
+
         private async void DoMove(UIContentType uiType)
         {
-            if (_isEventBlock)
+            if (_isEventBlock || _animationUISet.Count > 0)
             {
                 return;
             }
@@ -121,22 +147,23 @@ namespace Script.Manager
             }
             
             _uiCallStack.Add(target);
-
             _isEventBlock = true;
-
-            if (_currController != null)
-            {
-                await _currController.SetVisible(false);
-            }
 
             if (_initData != null)
             {
                 target.SetInitData(_initData);
             }
-            
-            await _uiMgr.SetVisibleUI(typeof(LoadingUIController), true);
+
+            // PopUp 제거 -> Loading 표기 -> 기존 UI 제거(즉시) -> 새 UI 표시(즉시) -> Loading 제거 -> 새 UI의 애니메이션 재생
+            await _popupMgr.ClearPopup();
+            await _uiMgr.SetVisibleUI<LoadingUIController>(true);
+            if (_currController != null)
+            {
+                await _currController.SetVisible(false, true);
+            }
+
             await target.SetVisible(true, true);
-            await _uiMgr.SetVisibleUI(typeof(LoadingUIController), false);
+            await _uiMgr.SetVisibleUI<LoadingUIController>(false);
             await target.ShowUIVisibleAnimation(true);
 
             _isEventBlock = false;
@@ -146,7 +173,7 @@ namespace Script.Manager
         
         private async void DoBack()
         {
-            if (_isEventBlock)
+            if (_isEventBlock || _animationUISet.Count > 0)
             {
                 return;
             }
@@ -158,6 +185,12 @@ namespace Script.Manager
 
             var targetUI = _uiCallStack[_uiCallStack.Count - 1];
 
+            if(_popupMgr.HasPopup())
+            {
+                _popupMgr.BackEvent.Execute();
+                return;
+            }
+
             if (_currController != targetUI)
             {
                 return;
@@ -166,12 +199,13 @@ namespace Script.Manager
             _isEventBlock = true;
             _uiCallStack.RemoveAt(_uiCallStack.Count-1);
 
-            await targetUI.SetVisible(false);
-            await _uiMgr.SetVisibleUI(typeof(LoadingUIController), true);
+            // Loading 표기 -> 기존 UI 제거(즉시) -> 새 UI 표시(즉시) -> Loading 제거 -> 새 UI의 애니메이션 재생
+            await _uiMgr.SetVisibleUI<LoadingUIController>(true);
+            await targetUI.SetVisible(false, true);
             
             _currController = _uiCallStack[_uiCallStack.Count - 1];
             await _currController.SetVisible(true, true);
-            await _uiMgr.SetVisibleUI(typeof(LoadingUIController), false);
+            await _uiMgr.SetVisibleUI<LoadingUIController>(false);
             await _currController.ShowUIVisibleAnimation(true);
                 
             _isEventBlock = false;

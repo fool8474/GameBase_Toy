@@ -17,10 +17,7 @@ namespace Script.UI.Controllers
     {
         private TestControllerPopup3 _testControllerPopup3;
         
-        public TestControllerPopup() : base("UITestPopup", new TestModelPopup())
-        {
-            
-        }
+        public TestControllerPopup() : base("UITestPopup", new TestModelPopup()){}
 
         public override void Initialize()
         {
@@ -34,7 +31,7 @@ namespace Script.UI.Controllers
             {
                 _testControllerPopup3 = new TestControllerPopup3();
             }
-            AddChildUI(typeof(TestControllerPopup3), _testControllerPopup3);
+            AddChildUI(_testControllerPopup3);
         }
 
         public override void InitializeWithData()

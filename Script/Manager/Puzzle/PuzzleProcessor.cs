@@ -1,36 +1,67 @@
-﻿using Assets.Script.Table;
+﻿using Script.Table;
 using Script.Manager.CSV;
 using Script.Manager.ManagerType;
 using Script.Manager.Util.Log;
-using System;
+using Assets.Script.Util;
+using Script.InGame.PuzzleBlockFactory;
+using Script.Inject;
+using Script.InGame.PuzzleBlock;
+using UnityEngine;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 
 namespace Script.Manager.Puzzle
 {
     public class PuzzleProcessor : ScriptMgr 
     {
-        private DefStage currentStage;
+        private DefStage _currentStage;
+        private PuzzleBlockFactoryMgr _puzzleBlockFactoryMgr;
+        private List<RectTransform> _playerRTList;
 
-        public void SetStage(int stageId)
+        public override void Inject()
         {
-            if(TableMgr.TryGetDefData(stageId, out currentStage) == false)
+            _puzzleBlockFactoryMgr = Injector.GetInstance<PuzzleBlockFactoryMgr>();
+        }
+
+        public void SetStage(int stageId, List<RectTransform> playerRTList)
+        {
+            _playerRTList?.Clear();
+            _playerRTList = playerRTList ;
+
+            if(TableMgr.TryGetDef(stageId, out _currentStage) == false)
             {
                 Log.EF(LogCategory.PUZZLE, "Cannot load stage from stageId {0}", stageId);
                 return;
             }
         }
 
-        public int GetNewPuzzleBlock()
+        public async UniTask<PuzzleBlockBase> GetNewPuzzleBlock(int playerNum, int ringNum, int posNum)
         {
-            for (int i = 0; i < currentStage.BlockInfo.BlockIdList.Count; i++)
+            var idx = RandomUtil.RandomIndex(_currentStage.BlockInfo.ProbabilityList);
+            var id = _currentStage.BlockInfo.BlockIdList[idx];
+
+            if (TableMgr.TryGetDef<DefBlockTypeSet>(id, out var blockTypeSet) == false)
             {
-                // TODO
+                return null;
             }
 
-            return 0;
+            switch (blockTypeSet.BlockType)
+            {
+                case InGame.PuzzleBlockType.NORMAL:
+                    {
+                        var block  = await _puzzleBlockFactoryMgr.GenerateBlock<PuzzleBlockNormal>(id);
+                        block.SetPos(_playerRTList[playerNum], ringNum, posNum, 9);
+                        return block;
+                    }
+                case InGame.PuzzleBlockType.OBSTACLE:
+                    {
+                        var block = await _puzzleBlockFactoryMgr.GenerateBlock<PuzzleBlockObstacle>(id);
+                        block.SetPos(_playerRTList[playerNum], ringNum, posNum, 9);
+                        return block;
+                    }
+            }
+
+            return null;
         }
     }
 }

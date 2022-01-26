@@ -1,7 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
+using Script.Event;
 using Script.Inject;
 using Script.Manager.ManagerType;
-using Script.Manager.Util.Log;
 using Script.Util;
 using UnityEngine;
 
@@ -11,10 +11,13 @@ namespace Script.Manager
     {
         private ResourceMgr _prefabMgr;
 
-        private Canvas _fixedCanvas;    // order : 100, 고정되어 씬 내에서 지속적으로 사용되는 UI
-        private Canvas _mainCanvas;     // order : 500, 대부분의 UI
+        private Canvas _mainCanvas;     // order : 100, 대부분의 UI
+        private Canvas _fixedCanvas;    // order : 500, 고정되어 씬 내에서 지속적으로 사용되는 UI
         private Canvas _popupCanvas;    // order : 1000, 일부의 팝업형 childUI나 공용 팝업으로 나타나는 UI
         private Canvas _loadingCanvas;  // order : 1500, 로딩 UI 전용
+
+        public IEventCommand FinishLoadingCanvas => _finishLoadingCanvas;
+        private EventCommand _finishLoadingCanvas = new EventCommand();
 
         public override void Initialize()
         {
@@ -60,6 +63,8 @@ namespace Script.Manager
             _fixedCanvas = await _prefabMgr.InstantiateObjId<Canvas>(AddressableID.CANVAS_FIXED);
             _popupCanvas = await _prefabMgr.InstantiateObjId<Canvas>(AddressableID.CANVAS_POPUP);
             _loadingCanvas = await _prefabMgr.InstantiateObjId<Canvas>(AddressableID.CANVAS_LOADING);
+
+            FinishLoadingCanvas.Execute();
         }
     }
 }

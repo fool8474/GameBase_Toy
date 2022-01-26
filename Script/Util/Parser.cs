@@ -25,7 +25,15 @@ namespace Script.Util
             V rtnValue = default;
             try
             {
-                rtnValue = (V)Convert.ChangeType(target, typeof(V));
+                if(typeof(V).IsEnum)
+                {
+                    rtnValue = (V)Enum.Parse(typeof(V), target.ToString());
+                }
+
+                else
+                {
+                    rtnValue = (V)Convert.ChangeType(target, typeof(V));
+                }
             }
 
             catch

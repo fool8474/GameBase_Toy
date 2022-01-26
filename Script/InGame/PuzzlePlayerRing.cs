@@ -8,11 +8,11 @@ namespace Script.InGame
     public class PuzzlePlayerRing : MonoBehaviour
     {
         private List<PuzzleRingRow> _ringList;
-
-        public PuzzlePlayerRing(int ringCount = 3)
+        
+        public void Initialize()
         {
             _ringList = new List<PuzzleRingRow>();
-            for (var i = 0; i < ringCount; i++)
+            for (var i = 0; i < 3; i++)
             {
                 _ringList.Add(new PuzzleRingRow());
             }

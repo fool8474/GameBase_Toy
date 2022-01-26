@@ -10,7 +10,7 @@ namespace Script.Table
 
         public readonly int AddressId;
 
-        public DefPerson(string name, string lastName, int addressId)
+        public DefPerson(int id, string name, string lastName, int addressId) : base(id)
         {
             Name = name;
             LastName = lastName;
@@ -25,7 +25,7 @@ namespace Script.Table
         public override void Build()
         {
             // 타 def 사용 데이터를 가져오도록 함.
-            TableMgr.TryGetDefData(AddressId, out Address);
+            TableMgr.TryGetDef(AddressId, out Address);
         }
     }
     
@@ -42,7 +42,7 @@ namespace Script.Table
 
         public override (int id, DefBase def) Build()
         {
-            var defPerson = new DefPerson(Name, LastName, AddressId);
+            var defPerson = new DefPerson(Id, Name, LastName, AddressId);
             return (Id, defPerson);
         }
     }

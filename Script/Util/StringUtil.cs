@@ -37,11 +37,11 @@ namespace Script.Util
         {
             var splited = target.Split(seps);
 
-            var rtnList = new List<T>(splited.Length);
+            var rtnList = new List<T>();
 
             for (int i = 0; i < splited.Length; i++)
             {
-                rtnList[i] = Parser.ConvertTo<string, T>(splited[i]);
+                rtnList.Add(Parser.ConvertTo<string, T>(splited[i]));
             }
 
             return rtnList;

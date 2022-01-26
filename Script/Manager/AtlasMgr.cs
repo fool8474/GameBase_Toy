@@ -1,5 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
-using Script.Inject;
+﻿using Script.Inject;
 using Script.Manager.ManagerType;
 using Script.Manager.Util.Log;
 using Script.Util;
@@ -13,6 +12,7 @@ namespace Script.Manager
     {
         NONE,
         UI_PUZZLE,
+        UI_ICON,
     }
 
     public class AtlasMgr : ScriptMgr
@@ -31,10 +31,11 @@ namespace Script.Manager
 
         private void RegisterAtlas()
         {
-            LoadAtlas(AddressableID.ATLAS_PUZZLE_ATLAS);
+            LoadAtlas(AtlasType.UI_PUZZLE, AddressableID.ATLAS_PUZZLE_ATLAS);
+            LoadAtlas(AtlasType.UI_ICON, AddressableID.ATLAS_ICON_ATLAS);
         }
 
-        private async void LoadAtlas(string id)
+        private async void LoadAtlas(AtlasType type, string id)
         {
             var atlas = await _resourceMgr.GetObjById<SpriteAtlas>(id);
             if (atlas == null)
@@ -43,12 +44,11 @@ namespace Script.Manager
                 return;
             }
 
-            _atlasDictionary.Add(AtlasType.UI_PUZZLE, atlas);
+            _atlasDictionary.Add(type, atlas);
         }
 
         public override void Inject()
         {
-            base.Inject();
             _resourceMgr = Injector.GetInstance<ResourceMgr>();
         }
 

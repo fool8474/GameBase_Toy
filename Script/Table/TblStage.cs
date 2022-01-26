@@ -1,7 +1,7 @@
 ﻿using Script.Manager.CSV;
 using Script.Table;
 
-namespace Assets.Script.Table
+namespace Script.Table
 {
     public class DefStage : DefBase
     {
@@ -9,24 +9,24 @@ namespace Assets.Script.Table
         
         private int _useBlockId;
 
-        public DefStage(int useBlockId)
+        public DefStage(int id, int useBlockId) : base(id)
         {
             _useBlockId = useBlockId;
         }
         
         public override void Build()
         {
-            TableMgr.TryGetDefData(_useBlockId, out BlockInfo);
+            TableMgr.TryGetDef(_useBlockId, out BlockInfo);
         }
     }
 
     public class TblStage : TblBase
     {
-        public int UseBlockId;
+        public int UseBlockId { get; set; }
 
         public override (int id, DefBase def) Build()
         {
-            var defStage = new DefStage(UseBlockId);
+            var defStage = new DefStage(Id, UseBlockId);
             return (Id, defStage);
         }
     }

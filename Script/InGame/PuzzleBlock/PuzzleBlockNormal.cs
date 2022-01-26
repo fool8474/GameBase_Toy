@@ -1,10 +1,7 @@
-﻿using Script.Inject;
-using Script.Manager;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Script.Manager;
+using Script.Manager.CSV;
+using Script.Manager.Util.Log;
+using Script.Table;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -14,16 +11,23 @@ namespace Script.InGame.PuzzleBlock
     {
         [SerializeField] private Image _blockImg;
         
-        private AtlasMgr _atlasMgr;
+        private DefBlockNormal _blockData;
 
-        protected override void InitializeSpecificBlock(List<string> valList) 
+        protected override void GetBlockData(int blockId)
         {
-            _atlasMgr = Injector.GetInstance<AtlasMgr>();
+            if(TableMgr.TryGetDef(blockId, out _blockData) == false)
+            {
+                Log.EF(LogCategory.PUZZLE, "Cannot load Normal Block Data from table {0}", blockId);
+                return;
+            }
+        }
 
-            var sprite = _atlasMgr.GetSprite(AtlasType.UI_PUZZLE, valList[0]);
+        protected override void InitializeBlockWithData()
+        {
+            var sprite = _atlasMgr.GetSprite(AtlasType.UI_PUZZLE, _blockData.SpriteName) ;
 
             _blockImg.sprite = sprite;
-            _blockImg.color = new Color(float.Parse(valList[1]), float.Parse(valList[2]), float.Parse(valList[3]), 117);
+            _blockImg.color = _blockData.SpriteColor;
         }
     }
 }

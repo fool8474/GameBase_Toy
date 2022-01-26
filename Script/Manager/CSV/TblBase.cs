@@ -25,7 +25,7 @@ namespace Script.Manager.CSV
                 
                 var propertyInfo = properties[classPropertyCnt];
                 
-                var type = properties[classPropertyCnt].PropertyType.Name;
+                var type = properties[classPropertyCnt].PropertyType.Name.ToUpper();
                 var value = propertyValues[i];
 
                 try
@@ -46,26 +46,33 @@ namespace Script.Manager.CSV
         {
             switch (type)
             {
-                case "int":
-                case "Int32":
+                case "INT":
+                case "INT32":
                 {
                     propertyInfo.SetValue(this, int.Parse(value));
                 }
                     break;
-                case "float":
+                case "FLOAT":
+                case "SINGLE":
                 {
                     propertyInfo.SetValue(this, float.Parse(value));
                 }
                     break;
-                case "char":
-                case "Char":
+                case "CHAR":
                 {
                     propertyInfo.SetValue(this, char.Parse(value));
                 }
                     break;
                 default:
                 {
-                    propertyInfo.SetValue(this, value);
+                        try
+                        {
+                            propertyInfo.SetValue(this, value);
+                        }
+                        catch
+                        {
+                            Log.EF(LogCategory.TABLE, "In SetPropertyValue, set Value {0} to property {1} error occured", value.ToString(), type.ToString());
+                        }
                 }
                     break;
             }

@@ -12,29 +12,28 @@ namespace Script.Manager.CSV
             var objects = new List<T>();
             var ignoreSet = new HashSet<int>();
 
-            var fullPath = Application.streamingAssetsPath + TableUtil.TABLE_DESTINATION + filePath;
+            var fullPath = TableUtil.TABLE_DESTINATION + "/" + filePath;
+            var csvAsset = Resources.Load<TextAsset>(fullPath);
+            var streader = new StringReader(csvAsset.ToString());
 
-            using (var sr = new StreamReader(fullPath))
+            var isDataRow = false;
+
+            while (true)
             {
-                var isData = false;
+                var line = streader.ReadLine();
 
-                while(true)
+                if (line == null)
                 {
-                    var line = sr.ReadLine();
-
-                    if (line == null)
-                    {
-                        break;
-                    }
-                    
-                    ReadRow(line, isData);
-                    isData = true; // 첫 열 이후에는 데이터
+                    break;
                 }
+                    
+                ReadRow(line, isDataRow);
+                isDataRow = true; // 첫 열 이후에는 데이터
             }
 
             return objects;
 
-            void ReadRow(string data, bool isHeader)
+            void ReadRow(string data, bool isData)
             {
                 var propertyValues = data.Split(',').ToList();
 
@@ -43,7 +42,7 @@ namespace Script.Manager.CSV
                 propertyValues.RemoveAt(0);
 
                 // data case
-                if (isHeader)
+                if (isData)
                 {
                     var obj = new T();
 
@@ -62,8 +61,9 @@ namespace Script.Manager.CSV
             {
                 for (var i = 0; i < propertyValues.Count; i++)
                 {
+                    var upperHeader = propertyValues[i].ToUpper();
                     // 이름에 memo가 포함된 열의 경우 무시하도록 한다.
-                    if (propertyValues[i].Contains("Memo"))
+                    if (upperHeader.Contains("MEMO"))
                     {
                         ignoreSet.Add(i);
                     }

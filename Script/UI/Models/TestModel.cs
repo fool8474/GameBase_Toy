@@ -8,7 +8,6 @@ namespace Script.UI.Models
     public class TestModel : Model
     {
         public IEventProperty<List<TestScrollData>> ScrollDataProperty => _scrollDataProperty;
-        
         private readonly EventProperty<List<TestScrollData>> _scrollDataProperty = new EventProperty<List<TestScrollData>>();
 
         public override void Initialize()

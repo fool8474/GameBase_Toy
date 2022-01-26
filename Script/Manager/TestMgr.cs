@@ -1,20 +1,37 @@
 ﻿using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
+using Script.Event;
 using Script.Inject;
 using Script.Manager.ManagerType;
 using Script.UI.Controllers;
+using UniRx;
 using UnityEngine;
 
 namespace Script.Manager
 {
     public class TestMgr : MonoMgr
     {
-        private PopupMgr _popupMgr;
         private UITransitionMgr _uiTransitionMgr;
-        
+        private CanvasMgr _canvasMgr;
+
+        private readonly CompositeDisposable _disposables = new CompositeDisposable();
+
+        public override void Initialize()
+        {
+            _canvasMgr.FinishLoadingCanvas
+                .Subscribe(ShowStartedMainUI)
+                .AddTo(_disposables);
+        }
+
+        private void ShowStartedMainUI()
+        {
+            _uiTransitionMgr.MoveEvent.Execute(UIContentType.TEST1);
+        }
+
         public override void Inject()
         {
-            _popupMgr = Injector.GetInstance<PopupMgr>();
             _uiTransitionMgr = Injector.GetInstance<UITransitionMgr>();
+            _canvasMgr = Injector.GetInstance<CanvasMgr>();
         }
 
         private void Update()
@@ -47,16 +64,6 @@ namespace Script.Manager
                 _uiTransitionMgr.MoveEvent.Execute(UIContentType.TEST4);
             }
             
-            // else if (Input.GetKeyDown(KeyCode.D))
-            // {
-            //     _popupMgr.AddPopup(PopupUIType.TEST);
-            // }
-            
-            // else if (Input.GetKeyDown(KeyCode.G))
-            // {
-            //     _popupMgr.QuitPopup();
-            // }
-
             else if (Input.GetKeyDown(KeyCode.H))
             {
                 _uiTransitionMgr.MoveEvent.Execute(UIContentType.MAIN_GAME);

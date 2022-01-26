@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Cysharp.Threading.Tasks;
+using Script.Event;
 using Script.Manager.ManagerType;
 using Script.Manager.Util.Log;
 using Script.UI;
 using Script.UI.Controllers;
+using UnityEngine;
 
 namespace Script.Manager
 {
@@ -20,47 +21,55 @@ namespace Script.Manager
     public class UIMgr : ScriptMgr
     {
         private Dictionary<Type, List<IController>> _uiDictionary;
-        
+        private GameObject _uiContainer;
+
         public override void Initialize()
         {
+            _uiContainer = GameObject.Find("UIContainer");
             RegisterUI();
         }
-        
-        public override void Inject()
+
+        public void ReturnView(GameObject viewObject)
         {
+            viewObject.transform.SetParent(_uiContainer.transform);
         }
         
-        public async UniTask SetVisibleUI(Type showType, bool isVisible)
+        public async UniTask SetVisibleUI<T>(bool isVisible) where T : class, IController, new()
         {
-            if (_uiDictionary.TryGetValue(showType, out var controllerList) == false)
+            var type = typeof(T);
+            if (_uiDictionary.TryGetValue(type, out var controllerList) == false)
             {
-                Log.EF(LogCategory.UI, "Cannot find presenter from uiDic {0}", showType.Name);
+                Log.EF(LogCategory.UI, "Cannot find presenter from uiDic {0}", type.Name);
                 return;
             }
             
             if (controllerList.Count == 0)
             {
-                Log.EF(LogCategory.UI, "No Controller in list {0}", showType.Name);
+                Log.EF(LogCategory.UI, "No Controller in list {0}", type.Name);
                 return;
             }
 
-            var controller = GetValidController(controllerList);
-
-            if (controller == null)
-            {
-                Log.EF(LogCategory.UI, "No Valid Controller {0}", showType.Name);
-                return;
-            }
-            
+            var controller = GetValidController<T>(controllerList, isVisible);
             await controller.SetVisible(isVisible);
         }
 
-        private IController GetValidController(IEnumerable<IController> ctrlList)
+        private T GetValidController<T>(IEnumerable<IController> ctrlList, bool isVisible) where T : class, IController, new()
         {
-            return ctrlList.FirstOrDefault();
+            foreach(var ctrl in ctrlList)
+            {
+                if(ctrl.IsVisible() != isVisible)
+                {
+                    return ctrl as T;
+                }
+            }
+
+            // No Valid Controller Case
+            var controller = new T();
+            RegisterUI(controller);
+            return controller;
         }
         
-        public T GetController<T>() where T : class, IController
+        public T GetController<T>() where T : class, IController, new()
         {
             if (TryGetController<T>(out var controller) == false)
             {
@@ -71,7 +80,7 @@ namespace Script.Manager
             return controller;
         }
         
-        public bool TryGetController<T>(out T controller) where T : class, IController
+        public bool TryGetController<T>(out T controller) where T : class, IController, new()
         {
             controller = default;
             
@@ -80,16 +89,18 @@ namespace Script.Manager
                 return false;
             }
 
-            controller = GetValidController(ctrlList) as T;
+            controller = GetValidController<T>(ctrlList, true);
+
             return true;
         }
         
-        public void RegisterUI(Type key, IController value)
+        public void RegisterUI<T>(T value) where T : IController
         {
-            if (_uiDictionary.TryGetValue(key, out var ctrlList) == false)
+            var type = typeof(T);
+            if (_uiDictionary.TryGetValue(type, out var ctrlList) == false)
             {
                 ctrlList = new List<IController>();
-                _uiDictionary.Add(key, ctrlList);
+                _uiDictionary.Add(type, ctrlList);
             }
 
             ctrlList.Add(value);
@@ -99,14 +110,17 @@ namespace Script.Manager
         private void RegisterUI()
         {
             _uiDictionary = new Dictionary<Type, List<IController>>();
-            
-            RegisterUI(typeof(TestController), new TestController());
-            RegisterUI(typeof(TestControllerPopup), new TestControllerPopup());
-            RegisterUI(typeof(TestControllerPopup2), new TestControllerPopup2());
-            RegisterUI(typeof(TestControllerPopup3), new TestControllerPopup3());
-            RegisterUI(typeof(LoadingUIController), new LoadingUIController());
-            RegisterUI(typeof(TestHeavyController), new TestHeavyController());
-            RegisterUI(typeof(InGameUIController), new InGameUIController());
+
+            RegisterUI(new TestController());
+            RegisterUI(new TestControllerPopup());
+            RegisterUI(new TestControllerPopup2());
+            RegisterUI(new TestControllerPopup3());
+            RegisterUI(new LoadingUIController());
+            RegisterUI(new TestHeavyController());
+            RegisterUI(new InGameUIController());
+            RegisterUI(new LobbyNavigationBarController());
+            RegisterUI(new AndroidTestUIController());
+            RegisterUI(new BottomFixedPlayerStatUIController());
         }
     }
 }

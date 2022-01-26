@@ -8,8 +8,8 @@ namespace Script.InGame
     {
         private List<PuzzleBlockBase> _blockList;
         private List<PuzzlePopArea> _targetBlockList;
-        
-        public PuzzleRingRow()
+
+        private void Start()
         {
             _blockList = new List<PuzzleBlockBase>();
             _targetBlockList = new List<PuzzlePopArea>();

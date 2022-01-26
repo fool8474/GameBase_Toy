@@ -5,8 +5,13 @@ namespace Assets.Script.Util
 {
     public static class RandomUtil
     {
-        public static int RandomIndex(List<int> probList, int sumValue)
+        public static int RandomIndex(List<int> probList, int sumValue = 0)
         {
+            if (sumValue == 0)
+            {
+                sumValue = GetSum(probList);
+            }
+
             var targetValue = Random.Range(0, sumValue);
 
             var sum = 0f;
@@ -24,8 +29,13 @@ namespace Assets.Script.Util
             return probList.Count - 1;
         }
 
-        public static int RandomIndex(List<float> probList, float sumValue)
+        public static int RandomIndex(List<float> probList, float sumValue = 0)
         {
+            if(sumValue == 0)
+            {
+                sumValue = GetSum(probList);
+            }
+
             var targetValue = Random.Range(0, sumValue);
             
             var sum = 0f;
@@ -43,10 +53,20 @@ namespace Assets.Script.Util
             return probList.Count - 1;
         }
 
-        public static T RandomTaget<T>(List<T> randomList, List<float> probList, float sumValue)
+        public static T RandomTarget<T>(List<T> randomList, List<float> probList, float sumValue = 0)
         {
-            
-            // TODO
+            if (sumValue == 0)
+            {
+                sumValue = GetSum(probList);
+            }
+
+            var targetIdx = RandomIndex(probList, sumValue);
+            return randomList[targetIdx];
+        }
+
+        public static int RandomIndex(int count)
+        {
+            return Random.Range(0, count);
         }
 
         public static T RandomTarget<T>(List<T> randomList)
